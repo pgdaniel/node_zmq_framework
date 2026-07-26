@@ -132,6 +132,46 @@ ports' per-handler error isolation).
 > you're hand-editing a `flow.yml` meant to stay portable across all five
 > implementations, keep env values comma-free.
 
+## Library: reusable nodes
+
+`library/` (as opposed to `nodes/`, which is the demo graph) holds small,
+general-purpose nodes meant to be dropped into *any* flow.yml, not just
+this repo's demo one:
+
+| node | job | key env vars |
+|------|-----|--------------|
+| `library/csv_reader.js` | reads a CSV file, publishes each row as JSON | `CSV_PATH`, `CSV_TOPIC`, `CSV_HAS_HEADER`, `CSV_INTERVAL_MS` |
+| `library/csv_writer.js` | subscribes to a topic, appends each payload as a CSV row | `CSV_PATH`, `CSV_TOPIC`, `CSV_COLUMNS` |
+| `library/json_transform.js` | subscribes to one topic, pick/renames fields, republishes on another | `JSON_SRC_TOPIC`, `JSON_DST_TOPIC`, `JSON_MAP` |
+
+They compose like any other nodes — wire them together with ordinary
+`flow.yml` entries:
+
+```yaml
+nodes:
+  reader:
+    cmd: node library/csv_reader.js
+    publishes: [people]
+    env: { CSV_PATH: people.csv, CSV_TOPIC: people }
+
+  transform:
+    cmd: node library/json_transform.js
+    subscribes: [people]
+    publishes: [people_short]
+    env: { JSON_SRC_TOPIC: people, JSON_DST_TOPIC: people_short, JSON_MAP: "name=first_name,years=age" }
+
+  writer:
+    cmd: node library/csv_writer.js
+    subscribes: [people_short]
+    env: { CSV_PATH: out.csv, CSV_TOPIC: people_short }
+```
+
+That's `csv_reader → json_transform → csv_writer` end to end over the bus
+— run it and `out.csv` ends up with just the renamed `name`/`years`
+columns. `library/csv.js` is a small hand-rolled RFC-4180-ish parser/writer
+(quoted fields, embedded commas, escaped quotes) — no CSV dependency,
+same minimal-dependency approach as everything else here.
+
 ## Known gap: no CAN bridge
 
 The other four ports include a `CanBridge` that relays real SocketCAN
@@ -148,8 +188,10 @@ run one of the other four ports' `can_bridge` node alongside a Node flow
 npm test
 ```
 
-Tests live in `lib/*.test.js`, using Node's built-in test runner (zero
-extra dependency), mirroring the other ports' suites: bus dispatch, flow
-wiring/graph computation (plus a round-trip parse → serialize → parse
-test, since this port uniquely needs that to hold), and StateRegistry's
-heartbeat/telemetry/snapshot behavior.
+Tests live in `lib/*.test.js` and `library/*.test.js`, using Node's
+built-in test runner (zero extra dependency — `npm test` discovers both
+directories automatically), mirroring the other ports' suites: bus
+dispatch, flow wiring/graph computation (plus a round-trip parse →
+serialize → parse test, since this port uniquely needs that to hold),
+StateRegistry's heartbeat/telemetry/snapshot behavior, and the CSV
+parser/writer's quoting and round-trip behavior.

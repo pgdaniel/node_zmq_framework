@@ -97,7 +97,12 @@ contract fits on one page: [`PROTOCOL.md`](PROTOCOL.md), including the raw
 add a `cmd` entry to `flow.yml`, and the language never matters again —
 including the original
 [ruby_zmq_framework](https://github.com/pgdaniel/ruby_zmq_framework) and
-its Zig, Go, and Rust ports, which all speak the exact same wire format.
+its [Zig](https://github.com/pgdaniel/zig_zmq_framework),
+[Go](https://github.com/pgdaniel/go_zmq_framework), and
+[Rust](https://github.com/pgdaniel/rust_zmq_framework) ports, which all
+speak the exact same wire format.
+[flow_viewer](https://github.com/pgdaniel/flow_viewer) can view and edit
+any of their `flow.yml` files.
 
 ## What's in the box
 
@@ -105,7 +110,7 @@ its Zig, Go, and Rust ports, which all speak the exact same wire format.
 |-------|------|-----|
 | `Bus` | `lib/bus.js` | ZeroMQ transport via the `zeromq` npm package; Node's single-threaded event loop makes "handlers never run concurrently" true by construction — no actor thread, recursive mutex, or send-lock needed, unlike the other four ports |
 | `boot()` | `lib/framework.js` | wires a node from `BUS_*`/`NODE_NAME`, checks the `handleMessage` contract, auto-heartbeat, `NodeHandle.broadcast`, TERM/INT handling |
-| `Flow` | `lib/flow.js` | parses **and serializes** `flow.yml` — the only one of the five ports that can write the manifest back out, which is what makes the interactive graph viewer's editing feature possible (see the parent repo's `viewer/`) |
+| `Flow` | `lib/flow.js` | parses **and serializes** `flow.yml` — the only one of the five ports that can write the manifest back out, which is what powers [flow_viewer](https://github.com/pgdaniel/flow_viewer)'s editing feature |
 | `flowctl` | `bin/flowctl.js` | assigns ports, spawns nodes, prefixes output, tears down on Ctrl-C |
 | `StateRegistry` | `lib/state_registry.js` | passive cluster-state cache; replays snapshots on request |
 | demo nodes | `nodes/*.js` | one blackbox process per file |

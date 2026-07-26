@@ -1,0 +1,20 @@
+{
+  "name": "node_zmq_framework",
+  "version": "0.1.0",
+  "description": "A Node.js port of ruby_zmq_framework: flow-based, language-agnostic node runtime over ZeroMQ pub/sub",
+  "type": "module",
+  "license": "MIT",
+  "main": "lib/index.js",
+  "bin": {
+    "flowctl": "bin/flowctl.js"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "zeromq": "^6.0.0"
+  }
+}

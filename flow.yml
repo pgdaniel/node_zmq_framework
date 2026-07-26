@@ -1,0 +1,35 @@
+# The graph as data — the only file that knows the whole topology.
+# Nodes are blackbox processes; wires are topics. Run it:
+#   bin/flowctl.js
+#
+# Each node declares the command that runs it and the topics it touches.
+# The launcher assigns ports, computes every node's peer list from who
+# publishes what it subscribes to, and injects the wiring as environment
+# variables (see PROTOCOL.md). Nodes never see this file.
+
+nodes:
+  ecu:
+    cmd: node nodes/ecu.js
+    publishes: [engine_data]
+    subscribes: [throttle_request]
+
+  telemetry:
+    cmd: node nodes/telemetry.js
+    publishes: [throttle_request]
+    subscribes: [engine_data]
+
+  webapp:
+    cmd: node nodes/webapp.js
+    publishes: [throttle_request]
+    subscribes: [engine_data]
+    env: { WEB_PORT: "4567" }
+
+  state_registry:
+    cmd: node nodes/state_registry.js
+    publishes: [global_state_snapshot]
+    subscribes: [heartbeat, engine_data, request_global_state]
+
+  dashboard:
+    cmd: node nodes/dashboard.js
+    publishes: [request_global_state]
+    subscribes: [global_state_snapshot]

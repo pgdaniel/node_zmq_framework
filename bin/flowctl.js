@@ -7,7 +7,7 @@
 //   flowctl other.yml
 //   flowctl --plan       # print computed wiring, run nothing
 //   flowctl --graph      # print the topology as JSON, run nothing
-import { spawn } from "node:child_process";
+import { spawn, execFileSync } from "node:child_process";
 import net from "node:net";
 import path from "node:path";
 import { Flow } from "../lib/flow.js";
@@ -15,6 +15,40 @@ import { Flow } from "../lib/flow.js";
 function fatal(msg) {
   console.error(msg);
   process.exit(1);
+}
+
+// None of this project's cmd: strings use shell syntax (pipes, redirects,
+// quoting) — they're plain "program arg1 arg2". Spawning those directly
+// (no shell) avoids Windows' `cmd.exe /c` wrapper entirely, so child.pid is
+// the real node/ruby/etc. process instead of a wrapper Windows won't
+// reliably tree-kill later. Fall back to a shell only when the command
+// actually needs one.
+const SHELL_METACHARACTERS = /[|&;<>()$`"'*?[\]#~!{}]/;
+
+function spawnNode(cmd, opts) {
+  if (!SHELL_METACHARACTERS.test(cmd)) {
+    const [program, ...args] = cmd.split(/\s+/).filter(Boolean);
+    return spawn(program, args, opts);
+  }
+  return spawn(cmd, { ...opts, shell: true });
+}
+
+// On Windows, a plain child.kill() only ever reaches whatever process.pid
+// points at directly. If spawnNode had to fall back to a shell above, that's
+// a `cmd.exe /c` wrapper, and killing it leaves the real process it launched
+// running — /T walks and kills that whole subtree instead of just the
+// wrapper (harmless no-op extra work for the common no-shell case, where
+// child.pid is already the real process with no children of its own).
+function killNode(child) {
+  if (process.platform === "win32") {
+    try {
+      execFileSync("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore" });
+    } catch {
+      // Already exited — fine.
+    }
+  } else {
+    child.kill("SIGTERM");
+  }
 }
 
 function freePort() {
@@ -98,7 +132,7 @@ async function main() {
 
   for (const node of flow.nodes) {
     const env = { ...process.env, ...wiringByName[node.name] };
-    const child = spawn("sh", ["-c", node.cmd], { cwd: root, env });
+    const child = spawnNode(node.cmd, { cwd: root, env });
     children.push({ name: node.name, child });
 
     pump(child.stdout, node.name);
@@ -120,7 +154,7 @@ async function main() {
     if (shuttingDown) return;
     shuttingDown = true;
     console.log(`\n[flowctl] shutting down ${remaining} nodes`);
-    for (const { child } of children) child.kill("SIGTERM");
+    for (const { child } of children) killNode(child);
     // Safety net only: the per-child 'exit' handler above is what
     // normally prints "all nodes exited" and calls process.exit — this
     // just guards against a child that never responds to SIGTERM.

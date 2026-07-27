@@ -4,6 +4,20 @@
   "description": "A Node.js port of ruby_zmq_framework: flow-based, language-agnostic node runtime over ZeroMQ pub/sub",
   "type": "module",
   "license": "MIT",
+  "author": "Paul Daniel <paulgdan@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pgdaniel/node_zmq_framework.git"
+  },
+  "keywords": [
+    "zeromq",
+    "zmq",
+    "pubsub",
+    "flow-based-programming",
+    "node-red",
+    "orchestration",
+    "ipc"
+  ],
   "main": "lib/index.js",
   "bin": {
     "flowctl": "bin/flowctl.js"
